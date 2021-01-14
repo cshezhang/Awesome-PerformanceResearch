@@ -1,4 +1,4 @@
-# Awesome-Performance_Bug-Research
+# Awesome-PerformanceBug-Research
 
 ## 1 Introduction
 
@@ -16,12 +16,12 @@ This repo includes diverse works related to performance issues. We divide these 
     * Skippable Function
     * Synchronization Issues
 3. Configuration-related
-    * CP-Detector, ASE 2020
+    * [CP-Detector, ASE 2020](#cpdetector), semantics based
         * Optimization on-off
         * Non-functional tradeoff
         * Resource allocation
         * Functionality on-off
-    * [LearnConf, EuroSys 2020](#learnconf)
+    * [LearnConf, EuroSys 2020](#learnconf), program dependency based
         * Data Dependency
         * Control Dependency
             * If-related
@@ -97,28 +97,27 @@ So, the author argued that constructing every statements' AST and graph embeddin
 This paper conducts a comprehensive study of 109 real-world performance bugs that are randomly sampled from five software suites. The important results are listed as two types below:
 * Root cause(Taxonomy)
     1. Uncoordinated Functions: inefficient function-call combinations composed of efficient individual functions.
-        * ![TransactionBug](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/TransactionBug.png)
-        * These transactions are used to adding bookmarks, actually, they can be merged into one transaction.
+        * These transactions are used to adding bookmarks, actually, they can be merged into one transaction
+            ![TransactionBug](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/TransactionBug.png)
     2. Skippable Function: call functions that conducts unnecessary work given the calling context
-        * ![SkippableFunction](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/SkippableFunction.png)
         * Calling *nsImage::Draw* for transparent figures is meaningless
-        * ![IntensiveGC](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/IntensiveGC.png)
+            ![SkippableFunction](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/SkippableFunction.png)
         * The GC call is useless, however, XMLHttpRequest is not popular at first, after Web 2.0, it becomes more and more popular. So, this problem lasted for five years before being fixed.
-    3. Synchronization Issues: unnecessary synchronization that intensifies thread competition is also a common cause of performance
-        * ![SyncBug](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/SyncBug.png)
-loss
+            ![IntensiveGC](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/IntensiveGC.png)
+    3. Synchronization Issues: unnecessary synchronization that intensifies thread competition is also a common cause of performance loss
+        ![SyncBug](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/SyncBug.png)
+
 * Rule-based detection
     * Efficiency Rule contains two components: A transformation and a condition
         * Once code region satisfies the condition, the transformation can be applied to improve performance.
     * Concluded from patches(A total of 109)
         * 50 / 109 have efficiency rules, the other 59 do not contain rules(either target too specific program contexts or too general to be useful for rule-based bug detection)
-        * ![Conditions](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/Conditions.png)
+            ![Conditions](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/Conditions.png)
         * For example, doTransaction can be fixed by the No.3 rule. Obviously, this approach is naive and easily leads to many FPs.
 
 ---
 
-### <a id="issre2019"></a>
-### Title: Inferring Performance Bug Patterns from Developer Commits
+### <a id="issre2019"></a>Title: Inferring Performance Bug Patterns from Developer Commits
 ### Source: ISSRE 2019
 This paper leverages performance bug related commits to understand the ecosystem and provides a benchmark for the future work.
 
@@ -213,3 +212,28 @@ Statistical debugging collects program predicates, such as whether a branch is t
 #### Model Selection
 * a basic model proposed by CBI work
 * ΔLDA
+
+### <a id="cpdetector"></a>Title: CP-Detector: Using Configuration-related Performance Properties to Expose Performance Bugs
+### Source: ASE 2020
+
+#### Taxonomy
+
+* Optimization on-off: a configuration option
+is used to control an optimization strategy
+    * MYSQL-67432
+        ```SQL
+        SELECT * FROM t WHERE c1<100 AND (c2<100 OR c3<100)
+        ```
+    * MySQL can speed up at least 10% by enabling the optimization strategy **index_merge=ON**
+
+* Non-functional tradeoff: a configuration option is used to achieve the balance between performance and other non-functional requirements of the program
+    * GCC uses O0, O1, O2, O3 options to control the balance between compilation time and binary execution efficiency. A higher O level indicates more compilation time.
+    * GCC-17520: switching from O0 to O2 increases the compilation time from less than 1 second to 1 minute, the root cause is a bug in branch prediction algorithm
+
+* Resource allocation: a configuration option is used to control resource usages (e.g., RAM, CPU cores)
+    * MYSQL-21727
+        ![mysql21727](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/mysql21727.png)
+    * Allocating more resources generally results in better performance. However, this case suffers from redundant memory allocation. Specifically, the buffer is allocated before each sub-query.
+
+* Functionality on-off: a configuration option is used to control a non-performance functionality but indirectly influences the system’s performance
+    * MariaDB-5802: log_slave_updates=on -> off
