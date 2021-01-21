@@ -27,8 +27,10 @@ This repo includes diverse works related to performance issues. We divide these 
             * If-related
             * Loop-related
 4. Specific performance issues
-    * Inefficient Loop(L-Doctor, ICSE 2017)
-    * [Wasteful memory access](#jxperf)
+    * Inefficient Loop([L-Doctor](#ldoctor), ICSE 2017)
+        * Resultless Loop
+        * Redundancy Loop
+    * Wasteful memory access([JXPerf](#jxperf), FSE, 2019)
         1. Dead store
         2. Silent store
         3. Silent load
@@ -38,7 +40,7 @@ This repo includes diverse works related to performance issues. We divide these 
 
 ### (2) Detection approach
 1. Program analysis, including static analysis and dynamic analysis, such as profiler and instrumentation
-    * L-Doctor ICSE 2017
+    * [L-Doctor](*ldoctor) ICSE 2017
         * Static-dynamic hybrid analysis to provide accurate performance diagnosis
     * [JXPerf FSE 2019](#jxperf)
         * Inefficiency Profiler
@@ -56,6 +58,52 @@ This repo includes diverse works related to performance issues. We divide these 
 
 ## 2 Detailed Paper Comments
 
+### <a id="ldoctor"></a>Title: Performance Diagnosis for Inefficient Loops
+### Source: ICSE 2017
+
+#### Contributions
+* design a root-cause and fix-strategy taxonomy for inefficient loops
+* design a static-dynamic hybrid analysis tool, LDoctor, to provide accurate performance diagnosis for loops
+    * LDoctor can automatically judge whether the symptom is caused by inefficient loops and provide detailed root-cause information that helps understand and fix inefficient loops
+
+#### Root-cause Taxonomy
+* Three requirements
+    * Coverage, covering a big portion of real-world inefficient loop problems
+    * Actionability, each root-cause category being informative enough to help developers fix a performance problem
+    * Generality, allowing automated diagnosis to be applied to many applications
+* Two categories
+    * **Resultless**: spend a lot of time in computation that does not produce results useful after the loop, contain four sub-types
+        * **0\***: never produce any results in any iteration. They are rare in mature software systems and should be deleted.
+        * **0*1?**: only produce results in the last iteration
+            * check a sequence of elements one by one until the right one is found
+            * Whether these loops are efficient or not depends on the workload
+            * ![Resultless01](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/resultless01.png)
+            * Fix: change the data structure(List -> Hash Table)
+        * **1\***: This category always generate results in almost all iterations.
+            * They are inefficient because their results are useless due to high-level semantic reasons.
+            * For example, several Mozilla performance problems are caused by loops that contain intensive GUI operations whose graphical outcome may not be observed by humans and hence can be optimized
+            * Fix strategies for these loops likely vary from case to case and are difficult to automate
+    * **Redundancy**: when a large amount of computation produces already-available results
+        * **Cross-iteration Redundancy**: one iteration repeats what was already done by an earlier iteration of the same loop
+        * **Cross-loop Redundancy**: one dynamic instance of a loop spends a big chunk, if not all, of its computation in repeating the work already done by an earlier instance of the same loop
+            ```c++
+            char* sss_xph_generate(node_t* aNode) {
+                int count=0;
+                for (n = aNode; n ; n = aNode->prev)
+                    if (n->localName == aNode->localName && n->namespaceURI == aNode->namespaceURI)
+                        count++;
+                ...
+            } //called for every node in a list
+            ```
+
+#### System Design
+* Three principles
+    1. symptom oriented.
+    2. static–dynamic hybrid
+    3. sampling
+
+---
+
 ### <a id="loadspy"></a>Title: Redundant Loads: A Software Inefficiency Indicator
 ### Source: ICSE 2019
 This paper focuses on redundant loads. The redundant loads can be classified into two categories:
@@ -69,7 +117,7 @@ It also proposes a definition **Redundancy Fraction**: the ratio of bytes redund
 The causes of redundant loads can be classified into 3 provenances:
 1. Input-sensitive Redundant Loads
     The following list is a case from *backprop*, a supervised learning algorithm. As the training progresses, many weights can be stabilized and *delta[j]* and *oldw[k][j]* are zeros. So, the computations can be bypassed.
-    ```c++
+    ```C++
     for (j = 1; j <= ndelta; j++) {
         for (k = 0; k <= nly; k++) {
             new_dw = ((ETA*delta[j]*ly[k])+(MOMENTUM*oldw[k][j]));
@@ -86,6 +134,8 @@ The causes of redundant loads can be classified into 3 provenances:
 3. Redundant Loads due to Missing Compiler Optimizations
     * ![MissingConstant](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/missingconstant.png)
     * The compiler does not replace the assignment with a constant, possibly due to its inability to prove the safety of assigning to a global array in the presence of concurrent threads of execution
+
+---
 
 ### <a id="jxperf"></a>Title: Pinpointing Performance Inefficiencies in Java
 ### Source: FSE 2019
