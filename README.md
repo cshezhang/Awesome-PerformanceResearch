@@ -46,6 +46,8 @@ This repo includes diverse works related to performance issues. We divide these 
         * Prior works mainly use bytecode instrumentation with high overhead
     * [LearnConf, EuroSys 2020](#learnconf)
         * Leverage static analysis to infer performance properties of software configs
+    * [LoadSpy, ICSE, 2019](#loadspy)
+        * Propose a whole-program fine-grained profiler to pinpoint redundant loads
 2. Statistical learning
     * [OOPSLA 2014](#oopsla2014)
 3. Deep Learning
@@ -53,6 +55,38 @@ This repo includes diverse works related to performance issues. We divide these 
         * AST with data dependency edge + graph embedding(Deep Walk)
 
 ## 2 Detailed Paper Comments
+
+### <a id="loadspy"></a>Title: Redundant Loads: A Software Inefficiency Indicator
+### Source: ICSE 2019
+This paper focuses on redundant loads. The redundant loads can be classified into two categories:
+* **Temporal Load Redundancy**
+    * A memory load operation L2, loading value V2 from location M, is redundant *iff* the previous load operation L1, performed on M, loaded a value V1 and V1 = V2. If V1 ≈ V2, we call it **approximate** temporal load redundancy.
+
+* **Spatial Load Redundancy** A memory load operation L2, loading a value V2 from location M2, is redundant iff the previous load operation L1, performed on location M1, loaded a value V1 and V1 = V2, and M1 and M2 belong to the address span of the same data object. If V1 ≈ V2, we call it **approximate** spatial load redundancy.
+
+It also proposes a definition **Redundancy Fraction**: the ratio of bytes redundantly loaded to the total bytes loaded in the entire execution. Large redundancy fraction in the execution profile of a program is a symptom of some kind of software inefficiency.
+
+The causes of redundant loads can be classified into 3 provenances:
+1. Input-sensitive Redundant Loads
+    The following list is a case from *backprop*, a supervised learning algorithm. As the training progresses, many weights can be stabilized and *delta[j]* and *oldw[k][j]* are zeros. So, the computations can be bypassed.
+    ```c++
+    for (j = 1; j <= ndelta; j++) {
+        for (k = 0; k <= nly; k++) {
+            new_dw = ((ETA*delta[j]*ly[k])+(MOMENTUM*oldw[k][j]));
+            w[k][j] += new_dw;
+            oldw[k][j] = new_dw;
+        }
+    }
+    ```
+
+2. Redundant Loads due to Suboptimal Data Structures and Algorithms
+    * Inefficiencies of this category require semantics to identify and optimize.  
+        ![SubOptimal](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/suboptimal.png)
+
+3. Redundant Loads due to Missing Compiler Optimizations
+    * ![MissingConstant](https://raw.githubusercontent.com/HuaienZhang/Awesome-PerformanceResearch/main/img/missingconstant.png)
+    * The compiler does not replace the assignment with a constant, possibly due to its inability to prove the safety of assigning to a global array in the presence of concurrent threads of execution
+
 ### <a id="jxperf"></a>Title: Pinpointing Performance Inefficiencies in Java
 ### Source: FSE 2019
 This paper leverages PMU and hardware debug register to detect wasteful memory access:
